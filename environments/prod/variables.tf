@@ -47,3 +47,12 @@ variable "key_name" {
 variable "app_bucket_name" {
   type = string
 }
+
+variable "dr_region" {
+  type = string
+}
+
+variable "dr_bucket_name" {
+  type = string
+}
+

@@ -31,6 +31,18 @@ module "s3" {
   environment = var.environment
 }
 
+module "dr_s3" {
+  source = "../../modules/s3"
+
+  providers = {
+    aws = aws.dr
+  }
+
+  bucket_name = var.dr_bucket_name
+
+  environment = "${var.environment}-dr"
+}
+
 module "iam" {
   source = "../../modules/iam"
 
@@ -44,13 +56,18 @@ module "ec2" {
 
   ami_id        = var.ami_id
   instance_type = var.instance_type
-  key_name = var.key_name
 
   subnet_id = module.vpc.public_subnet_id
 
   security_group_id = module.security_group.security_group_id
 
   instance_profile_name = module.iam.instance_profile_name
+
+  key_name = var.key_name
+
+  bucket_name = module.s3.bucket_name
+
+  aws_region = var.aws_region
 
   environment = var.environment
 
@@ -59,4 +76,14 @@ module "ec2" {
     module.security_group,
     module.iam
   ]
+}
+
+resource "aws_s3_bucket" "cross_account_demo" {
+  provider = aws.cross_account
+
+  bucket = "tanushka-cross-account-demo-001"
+
+  tags = {
+    Name = "CrossAccountDemo"
+  }
 }

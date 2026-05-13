@@ -17,7 +17,7 @@ module "vpc" {
 module "security_group" {
   source = "../../modules/security-group"
 
-  vpc_id     = module.vpc.vpc_id
+  vpc_id      = module.vpc.vpc_id
   environment = var.environment
 
   ssh_port  = var.ssh_port
@@ -86,4 +86,16 @@ resource "aws_s3_bucket" "cross_account_demo" {
   tags = {
     Name = "CrossAccountDemo"
   }
+}
+
+module "team_iam" {
+  source = "../../modules/team-iam"
+
+  environment = var.environment
+}
+
+module "secrets" {
+  source = "../../modules/secrets"
+
+  environment = var.environment
 }
