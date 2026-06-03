@@ -1,19 +1,20 @@
 trigger:
-- main
+  - main
 
 pool:
   name: Default
 
+variables:
+  environmentName: dev
+  artifactName: validation-output
+
 stages:
-
 - stage: Validate
-
+  displayName: "Validate Stage"
   jobs:
-
   - job: ValidateTerraform
-
+    displayName: "Terraform Lint & Validate"
     steps:
-
     - checkout: self
 
     - script: |
@@ -21,56 +22,46 @@ stages:
       displayName: "Terraform Version"
 
     - script: |
-        cd environments/dev
-        terraform fmt -check -recursive ../..
-      displayName: "Terraform Format"
+        terraform fmt -check -recursive
+      displayName: "Terraform Format Check"
 
     - script: |
-        cd environments/dev
-
+        cd environments/$(environmentName)
         terraform init -backend=false
-
         terraform validate
       displayName: "Terraform Validate"
 
     - script: |
-        mkdir output
-        echo "Validation Successful" > output/result.txt
-      displayName: "Create Artifact"
+        mkdir -p $(Build.ArtifactStagingDirectory)/output
+        echo "Validation Successful" > $(Build.ArtifactStagingDirectory)/output/result.txt
+      displayName: "Create Validation Log"
 
     - task: PublishBuildArtifacts@1
       inputs:
-        PathtoPublish: output
-        ArtifactName: validation-output
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)/output'
+        ArtifactName: '$(artifactName)'
+      displayName: "Publish Validation Artifact"
 
 - stage: Deploy
-
+  displayName: "Deploy Stage"
   dependsOn: Validate
-
   jobs:
-
   - deployment: DeployToDev
-
-    environment: dev
-
+    displayName: "Deploy to Dev Environment"
+    environment: '$(environmentName)'
     strategy:
-
       runOnce:
-
         deploy:
-
           steps:
-
           - task: DownloadBuildArtifacts@1
             inputs:
-              buildType: current
-              downloadType: single
-              artifactName: validation-output
-              downloadPath: $(System.DefaultWorkingDirectory)
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: '$(artifactName)'
+              downloadPath: '$(Pipeline.Workspace)'
+            displayName: "Download Validation Artifact"
 
           - script: |
               echo "Deployment Started"
-
-              cat validation-output/result.txt
-
+              cat $(Pipeline.Workspace)/$(artifactName)/result.txt
             displayName: "Deploy Using Artifact"
