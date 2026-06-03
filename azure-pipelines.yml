@@ -16,3 +16,12 @@ steps:
     cd environments/dev
     terraform fmt -check -recursive ../..
   displayName: "Terraform Format Check"
+
+- script: |
+    cd environments/dev
+
+    terraform init \
+      -backend=false
+
+    terraform validate
+  displayName: "Terraform Validate"
