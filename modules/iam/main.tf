@@ -16,7 +16,7 @@ resource "aws_iam_role" "ec2_role" {
       }
     ]
   })
- 
+
   tags = {
     Name = "${var.environment}-ec2-role"
   }
@@ -40,14 +40,14 @@ resource "aws_iam_policy" "ec2_policy" {
         Resource = var.bucket_arn
       },
       {
-    Effect = "Allow"
+        Effect = "Allow"
 
-    Action = [
-      "s3:PutObject"
-    ]
+        Action = [
+          "s3:PutObject"
+        ]
 
-    Resource = "${var.bucket_arn}/*"
-  }
+        Resource = "${var.bucket_arn}/*"
+      }
     ]
   })
 }

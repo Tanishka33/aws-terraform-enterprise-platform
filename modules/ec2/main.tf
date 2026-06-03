@@ -23,10 +23,10 @@ resource "aws_instance" "server" {
   iam_instance_profile = var.instance_profile_name
 
   lifecycle {
-  create_before_destroy = true
+    create_before_destroy = true
 
-  ignore_changes = [
-    tags
+    ignore_changes = [
+      tags
     ]
   }
 

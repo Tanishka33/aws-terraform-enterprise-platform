@@ -17,7 +17,7 @@ module "vpc" {
 module "security_group" {
   source = "../../modules/security-group"
 
-  vpc_id     = module.vpc.vpc_id
+  vpc_id      = module.vpc.vpc_id
   environment = var.environment
 
   ssh_port  = var.ssh_port

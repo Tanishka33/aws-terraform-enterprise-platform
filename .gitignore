@@ -15,3 +15,8 @@ crash.log
 *.log
 
 ./vscode/
+
+*.zip
+vault_*
+
+LICENSE.txt

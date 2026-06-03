@@ -15,14 +15,14 @@ provider "aws" {
   region = var.dr_region
 
   default_tags {
-  tags = {
-    Environment = var.environment
-    ManagedBy   = "Terraform"
-    Project     = "Enterprise-Platform"
-    Owner       = "Tanushka"
-    CostCenter  = "DevOps"
+    tags = {
+      Environment = var.environment
+      ManagedBy   = "Terraform"
+      Project     = "Enterprise-Platform"
+      Owner       = "Tanushka"
+      CostCenter  = "DevOps"
+    }
   }
-}
 }
 
 provider "aws" {

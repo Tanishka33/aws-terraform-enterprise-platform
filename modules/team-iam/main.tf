@@ -1,5 +1,9 @@
 resource "aws_iam_group" "devops" {
   name = "${var.environment}-devops-group"
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_iam_group_policy_attachment" "devops_admin" {

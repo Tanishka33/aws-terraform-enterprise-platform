@@ -6,9 +6,9 @@ resource "aws_s3_bucket" "app_bucket" {
     Environment = var.environment
   }
 
-#   lifecycle {
-#     prevent_destroy = true
-#   }
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_s3_bucket_versioning" "versioning" {
