@@ -10,6 +10,9 @@ pool:
 variables:
   tfFolder: environments/dev
   artifactName: tfplan
+  tfBucket: tanushka-terraform-state-prod
+  tfLockTable: terraform-state-lock
+  tfRegion: ap-south-1
 
 stages:
 
@@ -46,11 +49,9 @@ stages:
 
     - script: |
         cd $(tfFolder)
-        terraform init -input=false
+        terraform init -reconfigure -input=false -backend-config="bucket=$(tfBucket)" -backend-config="dynamodb_table=$(tfLockTable)" -backend-config="region=$(tfRegion)"
         terraform plan -input=false -out=$(Build.ArtifactStagingDirectory)/tfplan
       displayName: Terraform Plan
-      env:
-        TF_INPUT: false
 
     - task: PublishBuildArtifacts@1
       inputs:
@@ -77,11 +78,10 @@ stages:
               downloadType: 'single'
               artifactName: '$(artifactName)'
               downloadPath: '$(Pipeline.Workspace)'
+            displayName: Download Plan
 
           - script: |
               cd $(tfFolder)
-              terraform init -input=false
+              terraform init -reconfigure -input=false -backend-config="bucket=$(tfBucket)" -backend-config="dynamodb_table=$(tfLockTable)" -backend-config="region=$(tfRegion)"
               terraform apply -auto-approve $(Pipeline.Workspace)/$(artifactName)/tfplan
-            displayName: Apply Approved Plan
-            env:
-              TF_INPUT: false
+            displayName: Terraform Apply
