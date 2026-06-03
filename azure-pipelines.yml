@@ -28,3 +28,14 @@ steps:
 
     terraform validate
   displayName: "Terraform Validate"
+
+- script: |
+    mkdir output
+    echo "Terraform Validation Passed" > output/result.txt
+  displayName: "Generate Artifact"
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: 'output'
+    ArtifactName: 'validation-output'
+  displayName: "Publish Artifact"
