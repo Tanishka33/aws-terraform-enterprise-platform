@@ -1,18 +1,89 @@
 trigger:
-- main
+  - main
+
+pr:
+  - main
 
 pool:
   name: Default
 
-steps:
+variables:
+  tfFolder: environments/dev
+  artifactName: tfplan
+  tfBucket: tanushka-terraform-state-prod
+  tfLockTable: terraform-state-lock
+  tfRegion: ap-south-1
 
-- checkout: self
+stages:
 
-- script: |
-    terraform version
-  displayName: "Terraform Version"
+# VALIDATE
+- stage: Validate
+  displayName: Validate
+  jobs:
+  - job: ValidateJob
+    steps:
+    - checkout: self
 
-- script: |
-    cd environments/dev
-    terraform fmt -check -recursive ../..
-  displayName: "Terraform Format Check"
+    - script: |
+        terraform version
+      displayName: Terraform Version
+
+    - script: |
+        terraform fmt -check -recursive
+      displayName: Terraform Format
+
+    - script: |
+        cd $(tfFolder)
+        terraform init -backend=false
+        terraform validate
+      displayName: Terraform Validate
+
+# PLAN
+- stage: Plan
+  displayName: Plan
+  dependsOn: Validate
+  jobs:
+  - job: PlanJob
+    steps:
+    - checkout: self
+
+    - script: |
+        cd $(tfFolder)
+        rm -rf .terraform
+        rm -f .terraform.lock.hcl
+        terraform init -reconfigure -backend-config="bucket=$(tfBucket)" -backend-config="dynamodb_table=$(tfLockTable)" -backend-config="region=$(tfRegion)"
+        terraform plan -out=tfplan
+      displayName: Terraform Plan
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: '$(Build.SourcesDirectory)/$(tfFolder)/tfplan'
+        ArtifactName: '$(artifactName)'
+      displayName: Publish Terraform Plan
+
+# APPLY
+- stage: Apply
+  displayName: Apply
+  dependsOn: Plan
+  jobs:
+  - deployment: ApplyDeployment
+    environment: dev
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - task: DownloadBuildArtifacts@1
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: '$(artifactName)'
+              downloadPath: '$(Pipeline.Workspace)'
+            displayName: Download Plan
+
+          - script: |
+              cd $(tfFolder)
+              terraform init -reconfigure -input=false -backend-config="bucket=$(tfBucket)" -backend-config="dynamodb_table=$(tfLockTable)" -backend-config="region=$(tfRegion)"
+              terraform apply -auto-approve $(Pipeline.Workspace)/$(artifactName)/tfplan
+            displayName: Terraform Apply
