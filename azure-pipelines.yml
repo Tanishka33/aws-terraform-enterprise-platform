@@ -13,10 +13,9 @@ variables:
 
 stages:
 
-# STAGE 1 — VALIDATE
-
+# VALIDATE
 - stage: Validate
-  displayName: "Terraform Validation"
+  displayName: Validate
   jobs:
   - job: ValidateJob
     steps:
@@ -24,22 +23,21 @@ stages:
 
     - script: |
         terraform version
-      displayName: "Terraform Version"
+      displayName: Terraform Version
 
     - script: |
         terraform fmt -check -recursive
-      displayName: "Terraform Format"
+      displayName: Terraform Format
 
     - script: |
         cd $(tfFolder)
         terraform init -backend=false
         terraform validate
-      displayName: "Terraform Validate"
+      displayName: Terraform Validate
 
-# STAGE 2 — PLAN
-
+# PLAN
 - stage: Plan
-  displayName: "Terraform Plan"
+  displayName: Plan
   dependsOn: Validate
   jobs:
   - job: PlanJob
@@ -48,20 +46,21 @@ stages:
 
     - script: |
         cd $(tfFolder)
-        terraform init
-        terraform plan -out=$(Build.ArtifactStagingDirectory)/tfplan
-      displayName: "Terraform Plan"
+        terraform init -input=false
+        terraform plan -input=false -out=$(Build.ArtifactStagingDirectory)/tfplan
+      displayName: Terraform Plan
+      env:
+        TF_INPUT: false
 
     - task: PublishBuildArtifacts@1
       inputs:
         PathtoPublish: '$(Build.ArtifactStagingDirectory)/tfplan'
         ArtifactName: '$(artifactName)'
-      displayName: "Publish Terraform Plan"
+      displayName: Publish Terraform Plan
 
-# STAGE 3 — APPLY
-
+# APPLY
 - stage: Apply
-  displayName: "Terraform Apply"
+  displayName: Apply
   dependsOn: Plan
   jobs:
   - deployment: ApplyDeployment
@@ -78,10 +77,11 @@ stages:
               downloadType: 'single'
               artifactName: '$(artifactName)'
               downloadPath: '$(Pipeline.Workspace)'
-            displayName: "Download Approved Plan"
 
           - script: |
               cd $(tfFolder)
-              terraform init
+              terraform init -input=false
               terraform apply -auto-approve $(Pipeline.Workspace)/$(artifactName)/tfplan
-            displayName: "Apply Approved Plan"
+            displayName: Apply Approved Plan
+            env:
+              TF_INPUT: false
