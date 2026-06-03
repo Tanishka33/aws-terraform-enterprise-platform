@@ -49,17 +49,28 @@ stages:
 
   jobs:
 
-  - job: DeployJob
+  - deployment: DeployToDev
 
-    steps:
+    environment: dev
 
-    - task: DownloadBuildArtifacts@1
-      inputs:
-        buildType: current
-        downloadType: single
-        artifactName: validation-output
-        downloadPath: $(System.DefaultWORKINGDIRECTORY)
+    strategy:
 
-    - script: |
-        cat validation-output/result.txt
-      displayName: "Consume Artifact"
+      runOnce:
+
+        deploy:
+
+          steps:
+
+          - task: DownloadBuildArtifacts@1
+            inputs:
+              buildType: current
+              downloadType: single
+              artifactName: validation-output
+              downloadPath: $(System.DefaultWorkingDirectory)
+
+          - script: |
+              echo "Deployment Started"
+
+              cat validation-output/result.txt
+
+            displayName: "Deploy Using Artifact"
