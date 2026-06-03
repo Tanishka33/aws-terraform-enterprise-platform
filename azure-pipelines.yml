@@ -49,13 +49,15 @@ stages:
 
     - script: |
         cd $(tfFolder)
-        terraform init -reconfigure -input=false -backend-config="bucket=$(tfBucket)" -backend-config="dynamodb_table=$(tfLockTable)" -backend-config="region=$(tfRegion)"
-        terraform plan -input=false -out=$(Build.ArtifactStagingDirectory)/tfplan
+        rm -rf .terraform
+        rm -f .terraform.lock.hcl
+        terraform init -reconfigure -backend-config="bucket=$(tfBucket)" -backend-config="dynamodb_table=$(tfLockTable)" -backend-config="region=$(tfRegion)"
+        terraform plan -out=tfplan
       displayName: Terraform Plan
 
     - task: PublishBuildArtifacts@1
       inputs:
-        PathtoPublish: '$(Build.ArtifactStagingDirectory)/tfplan'
+        PathtoPublish: '$(Build.SourcesDirectory)/$(tfFolder)/tfplan'
         ArtifactName: '$(artifactName)'
       displayName: Publish Terraform Plan
 
