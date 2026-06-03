@@ -1,19 +1,24 @@
 trigger:
   - main
 
+pr:
+  - main
+
 pool:
   name: Default
 
 variables:
-  environmentName: dev
-  artifactName: validation-output
+  tfFolder: environments/dev
+  artifactName: tfplan
 
 stages:
+
+# STAGE 1 — VALIDATE
+
 - stage: Validate
-  displayName: "Validate Stage"
+  displayName: "Terraform Validation"
   jobs:
-  - job: ValidateTerraform
-    displayName: "Terraform Lint & Validate"
+  - job: ValidateJob
     steps:
     - checkout: self
 
@@ -23,45 +28,60 @@ stages:
 
     - script: |
         terraform fmt -check -recursive
-      displayName: "Terraform Format Check"
+      displayName: "Terraform Format"
 
     - script: |
-        cd environments/$(environmentName)
+        cd $(tfFolder)
         terraform init -backend=false
         terraform validate
       displayName: "Terraform Validate"
 
+# STAGE 2 — PLAN
+
+- stage: Plan
+  displayName: "Terraform Plan"
+  dependsOn: Validate
+  jobs:
+  - job: PlanJob
+    steps:
+    - checkout: self
+
     - script: |
-        mkdir -p $(Build.ArtifactStagingDirectory)/output
-        echo "Validation Successful" > $(Build.ArtifactStagingDirectory)/output/result.txt
-      displayName: "Create Validation Log"
+        cd $(tfFolder)
+        terraform init
+        terraform plan -out=$(Build.ArtifactStagingDirectory)/tfplan
+      displayName: "Terraform Plan"
 
     - task: PublishBuildArtifacts@1
       inputs:
-        PathtoPublish: '$(Build.ArtifactStagingDirectory)/output'
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)/tfplan'
         ArtifactName: '$(artifactName)'
-      displayName: "Publish Validation Artifact"
+      displayName: "Publish Terraform Plan"
 
-- stage: Deploy
-  displayName: "Deploy Stage"
-  dependsOn: Validate
+# STAGE 3 — APPLY
+
+- stage: Apply
+  displayName: "Terraform Apply"
+  dependsOn: Plan
   jobs:
-  - deployment: DeployToDev
-    displayName: "Deploy to Dev Environment"
-    environment: '$(environmentName)'
+  - deployment: ApplyDeployment
+    environment: dev
     strategy:
       runOnce:
         deploy:
           steps:
+          - checkout: self
+
           - task: DownloadBuildArtifacts@1
             inputs:
               buildType: 'current'
               downloadType: 'single'
               artifactName: '$(artifactName)'
               downloadPath: '$(Pipeline.Workspace)'
-            displayName: "Download Validation Artifact"
+            displayName: "Download Approved Plan"
 
           - script: |
-              echo "Deployment Started"
-              cat $(Pipeline.Workspace)/$(artifactName)/result.txt
-            displayName: "Deploy Using Artifact"
+              cd $(tfFolder)
+              terraform init
+              terraform apply -auto-approve $(Pipeline.Workspace)/$(artifactName)/tfplan
+            displayName: "Apply Approved Plan"
