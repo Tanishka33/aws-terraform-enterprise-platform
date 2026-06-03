@@ -39,3 +39,15 @@ steps:
     PathtoPublish: 'output'
     ArtifactName: 'validation-output'
   displayName: "Publish Artifact"
+
+- task: DownloadBuildArtifacts@1
+  inputs:
+    buildType: current
+    downloadType: single
+    artifactName: validation-output
+    downloadPath: $(System.DefaultWorkingDirectory)
+
+- script: |
+    ls -la
+    cat validation-output/result.txt
+  displayName: "Read Artifact"
