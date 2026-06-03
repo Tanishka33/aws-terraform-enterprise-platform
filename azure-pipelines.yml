@@ -1,8 +1,8 @@
-trigger :
+trigger:
 - main
 
-pool:  
-name: Default
+pool:
+  name: Default
 
 steps:
 
@@ -10,9 +10,9 @@ steps:
 
 - script: |
     terraform version
-displayName: "Terraform Version"
+  displayName: "Terraform Version"
 
 - script: |
     cd environments/dev
     terraform fmt -check -recursive ../..
-displayNmae: "Terraform Format Check"
+  displayName: "Terraform Format Check"
