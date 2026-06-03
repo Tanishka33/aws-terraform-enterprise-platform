@@ -1,53 +1,65 @@
 trigger:
 - main
 
-pr:
-- main
-
 pool:
   name: Default
 
-steps:
+stages:
 
-- checkout: self
+- stage: Validate
 
-- script: |
-    terraform version
-  displayName: "Terraform Version"
+  jobs:
 
-- script: |
-    cd environments/dev
-    terraform fmt -check -recursive ../..
-  displayName: "Terraform Format Check"
+  - job: ValidateTerraform
 
-- script: |
-    cd environments/dev
+    steps:
 
-    terraform init \
-      -backend=false
+    - checkout: self
 
-    terraform validate
-  displayName: "Terraform Validate"
+    - script: |
+        terraform version
+      displayName: "Terraform Version"
 
-- script: |
-    mkdir output
-    echo "Terraform Validation Passed" > output/result.txt
-  displayName: "Generate Artifact"
+    - script: |
+        cd environments/dev
+        terraform fmt -check -recursive ../..
+      displayName: "Terraform Format"
 
-- task: PublishBuildArtifacts@1
-  inputs:
-    PathtoPublish: 'output'
-    ArtifactName: 'validation-output'
-  displayName: "Publish Artifact"
+    - script: |
+        cd environments/dev
 
-- task: DownloadBuildArtifacts@1
-  inputs:
-    buildType: current
-    downloadType: single
-    artifactName: validation-output
-    downloadPath: $(System.DefaultWorkingDirectory)
+        terraform init -backend=false
 
-- script: |
-    ls -la
-    cat validation-output/result.txt
-  displayName: "Read Artifact"
+        terraform validate
+      displayName: "Terraform Validate"
+
+    - script: |
+        mkdir output
+        echo "Validation Successful" > output/result.txt
+      displayName: "Create Artifact"
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: output
+        ArtifactName: validation-output
+
+- stage: Deploy
+
+  dependsOn: Validate
+
+  jobs:
+
+  - job: DeployJob
+
+    steps:
+
+    - task: DownloadBuildArtifacts@1
+      inputs:
+        buildType: current
+        downloadType: single
+        artifactName: validation-output
+        downloadPath: $(System.DefaultWORKINGDIRECTORY)
+
+    - script: |
+        cat validation-output/result.txt
+      displayName: "Consume Artifact"
