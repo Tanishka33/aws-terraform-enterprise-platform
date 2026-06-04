@@ -11,12 +11,15 @@ variables:
   tfFolder: environments/dev
   artifactName: tfplan
   tfBucket: tanushka-terraform-state-prod
+  tfKey: dev/terraform.tfstate
   tfLockTable: terraform-state-lock
   tfRegion: ap-south-1
 
 stages:
 
+# =====================================
 # VALIDATE
+# =====================================
 - stage: Validate
   displayName: Validate
   jobs:
@@ -34,11 +37,14 @@ stages:
 
     - script: |
         cd $(tfFolder)
+        rm -rf .terraform
         terraform init -backend=false
         terraform validate
       displayName: Terraform Validate
 
+# =====================================
 # PLAN
+# =====================================
 - stage: Plan
   displayName: Plan
   dependsOn: Validate
@@ -50,18 +56,19 @@ stages:
     - script: |
         cd $(tfFolder)
         rm -rf .terraform
-        rm -f .terraform.lock.hcl
-        terraform init -reconfigure -backend-config="bucket=$(tfBucket)" -backend-config="dynamodb_table=$(tfLockTable)" -backend-config="region=$(tfRegion)"
-        terraform plan -out=tfplan
+        terraform init -reconfigure -input=false -backend-config="bucket=$(tfBucket)" -backend-config="key=$(tfKey)" -backend-config="region=$(tfRegion)" -backend-config="dynamodb_table=$(tfLockTable)"
+        terraform plan -input=false -out=tfplan
       displayName: Terraform Plan
 
     - task: PublishBuildArtifacts@1
       inputs:
         PathtoPublish: '$(Build.SourcesDirectory)/$(tfFolder)/tfplan'
         ArtifactName: '$(artifactName)'
-      displayName: Publish Terraform Plan
+      displayName: Publish Plan
 
+# =====================================
 # APPLY
+# =====================================
 - stage: Apply
   displayName: Apply
   dependsOn: Plan
@@ -80,10 +87,11 @@ stages:
               downloadType: 'single'
               artifactName: '$(artifactName)'
               downloadPath: '$(Pipeline.Workspace)'
-            displayName: Download Plan
+            displayName: Download Approved Plan
 
           - script: |
               cd $(tfFolder)
-              terraform init -reconfigure -input=false -backend-config="bucket=$(tfBucket)" -backend-config="dynamodb_table=$(tfLockTable)" -backend-config="region=$(tfRegion)"
+              rm -rf .terraform
+              terraform init -reconfigure -input=false -backend-config="bucket=$(tfBucket)" -backend-config="key=$(tfKey)" -backend-config="region=$(tfRegion)" -backend-config="dynamodb_table=$(tfLockTable)"
               terraform apply -auto-approve $(Pipeline.Workspace)/$(artifactName)/tfplan
             displayName: Terraform Apply
